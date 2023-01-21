@@ -6,7 +6,6 @@ option(ENABLE_TESTS "Enable tests" ON)
 set(CMAKE_CXX_STANDARD 17)
 find_package(Boost REQUIRED COMPONENTS headers filesystem)
 find_package(pybind11 REQUIRED)
-find_package(fmt REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(RapidJSON REQUIRED IMPORTED_TARGET RapidJSON)
 
@@ -18,7 +17,6 @@ target_link_libraries(_vimgcov PRIVATE
     Boost::headers
     Boost::filesystem
     PkgConfig::RapidJSON
-    fmt::fmt
 )
 
 if(ENABLE_TESTS)
