@@ -5,19 +5,16 @@
 #include <pybind11/stl.h>
 #include <rapidjson/reader.h>
 #include <memory>
-#include <fmt/core.h>
-
 #include <iostream>
 
 #include "gcov_json_handler.hpp"
 
 namespace py = pybind11;
 
-using std::cout;
-using std::endl;
-using std::boolalpha;
-using SizeType = std::size_t;
-auto foo(std::deque<std::string> gcnos, unsigned j)
+files_t getcoverage(
+    std::deque<std::string> gcnos,
+    unsigned j,
+    const std::string& path)
 {
     struct per_proc_t
     {
@@ -73,7 +70,10 @@ auto foo(std::deque<std::string> gcnos, unsigned j)
             per_proc.erase(it);
             return;
         }
-        const auto err_str = parse_gcov_json(rv, buf, [] (auto) { return true; });
+        const auto err_str = parse_gcov_json(rv, buf,
+                                             [&path] (const auto& x) {
+                                                 return x == path; }
+        );
         per_proc.erase(it);
         if (!err_str.empty())
             std::cerr << "error in gcov json file: " << err_str << std::endl;
@@ -92,7 +92,7 @@ auto foo(std::deque<std::string> gcnos, unsigned j)
 }
 
 
-PYBIND11_MODULE(_foo, m)
+PYBIND11_MODULE(_vimgcov, m)
 {
-    m.def("foo", foo);
+    m.def("getcoverage", getcoverage);
 }
