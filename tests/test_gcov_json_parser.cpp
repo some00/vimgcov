@@ -6,7 +6,8 @@
 #include <rapidjson/reader.h>
 
 
-struct test_gcov_json_parser : ::testing::TestWithParam<std::tuple<std::string, files_t>> {};
+struct test_gcov_json_parser : ::testing::TestWithParam<
+                                 std::tuple<std::string, files_t>> {};
 
 
 TEST_P(test_gcov_json_parser, test)
