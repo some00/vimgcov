@@ -5,7 +5,6 @@
 #include <pybind11/stl.h>
 #include <rapidjson/reader.h>
 #include <memory>
-#include <iostream>
 
 #include "gcov_json_handler.hpp"
 
