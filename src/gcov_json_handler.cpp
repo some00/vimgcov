@@ -76,9 +76,7 @@ std::string parse_gcov_json(files_t& out,
 
             const auto itl = std::lower_bound(
                     lines_out.begin(), lines_out.end(),
-                    line_number,
-                    [] (const auto& t, const auto line_number) {
-                        return std::get<0>(t) < line_number; }
+                    std::make_tuple(line_number, false)
             );
             if (itl != lines_out.end() && std::get<0>(*itl) == line_number)
                 std::get<1>(*itl) &= unexecute_block;
