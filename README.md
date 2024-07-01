@@ -1,37 +1,48 @@
 # VIMGCOV
-My vim plugin for showing gcov coverage for C/C++ code.
+
+VIMGCOV is a Vim plugin designed to display gcov coverage for C/C++ code.
 
 ## Dependencies
-- recent gcov commandline interface (with json output)
+
+- Recent gcov command-line interface (with JSON output)
 - Boost (Process library)
 - pybind11
 - pkg-config
 - RapidJSON
-## Install the plugin
-Using your favourite plugin manager install this repo and it's dependencies.
-```
-" in .vimrc Vundle
+
+## Installation
+
+To install the plugin, use your preferred plugin manager and include this repository and its dependencies in your `.vimrc`:
+
+```vim
+" in .vimrc for Vundle
 :Plugin 'google/vim-maktaba'
 :Plugin 'google/vim-coverage'
 :Plugin 'some00/vimgcov'
-" execute :PluginInstall
+" then execute :PluginInstall
 ```
-and install the native python module.
-```
+
+Next, install the native Python module:
+
+```bash
 cd ~/.vim/bundle/vimgcov
 cmake -S . _build \
-	-DENABLE_TESTS=OFF \
-	-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	-DCMAKE_CXX_COMPILER=clang++ \
-	-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
-	-DCMAKE_BUILD_TYPE=Release
+    -DENABLE_TESTS=OFF \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+    -DCMAKE_BUILD_TYPE=Release
 cmake --build _build
 ```
-This will create `_vimgcov.<python-version>.so` inside `python` folder. A nasty little hack but works perfectly.
+
+This will create `_vimgcov.<python-version>.so` in the `python` folder. It’s a workaround, but it functions perfectly.
 
 ## Usage
-The plugin searches for `.gcno` files recursively in the current work directory and assumes that gcov retuns absolute path for sources, which is the case for CMake based projects. Works great if vim is started in the root of the source tree and a build folder is created there.
-```
-" Open source file and execute
+
+The plugin searches for `.gcno` files recursively in the current working directory and assumes that gcov returns absolute paths for sources, which is typical for CMake-based projects. It works best when Vim is started from the root of the source tree with a build folder created there.
+
+To use, open a source file and execute:
+
+```vim
 :CoverageToggle! " command from vim-coverage, for which this repo is a provider
 ```
