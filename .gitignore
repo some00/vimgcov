@@ -2,3 +2,5 @@ _build*
 compile_commands.json
 **/*.so
 **/__pycache__
+/coverage
+/TODO
