@@ -10,29 +10,29 @@
 
 using rapidjson::Document;
 
-std::string parse_gcov_json(files_t& out,
-                            const std::string& buf,
-                            filename_selector_t filename_selector)
+void parse_gcov_json(files_t& out,
+                     const std::string& buf,
+                     filename_selector_t filename_selector)
 {
     Document d;
     if (d.Parse(buf.c_str()).HasParseError())
-        return "parse error";
+        throw parse_exception{"parse error"};
     if (!d.IsObject())
-        return "root isn't object";
+        throw parse_exception{"root isn't object"};
     if (!d.HasMember("files"))
-        return "no 'files' attribute";
+        throw parse_exception{"no 'files' attribute"};
     if (!d["files"].IsArray())
-        return "'files' isn't array";
+        throw parse_exception{"'files' isn't array"};
     const auto files = d["files"].GetArray();
     for (const auto& file : files)
     {
         if (!file.IsObject())
-            return "file isn't object";
+            throw parse_exception{"file isn't object"};
 
         if (!file.HasMember("file"))
-            return "no 'file' attribute";
+            throw parse_exception{"no 'file' attribute"};
         if (!file["file"].IsString())
-            return "'file' isn't string";
+            throw parse_exception{"'file' isn't string"};
         const auto filename = file["file"].GetString();
         if (!filename_selector(filename))
             continue;
@@ -45,31 +45,31 @@ std::string parse_gcov_json(files_t& out,
         auto& lines_out = itf->second;
 
         if (!file.HasMember("lines"))
-            return "no lines attribute";
+            throw parse_exception{"no lines attribute"};
         if (!file["lines"].IsArray())
-            return "'lines' isn't array";
+            throw parse_exception{"'lines' isn't array"};
         const auto lines = file["lines"].GetArray();
         for (const auto& line : lines)
         {
             if (!line.IsObject())
-                return "line isn't object";
+                throw parse_exception{"line isn't object"};
 
             if (!line.HasMember("unexecuted_block"))
-                return "no unexecute_block attribute";
+                throw parse_exception{"no unexecute_block attribute"};
             if (!line["unexecuted_block"].IsBool())
-                return "'unexecuted_block' isn't bool";
+                throw parse_exception{"'unexecuted_block' isn't bool"};
             auto unexecute_block = line["unexecuted_block"].GetBool();
 
             if (!line.HasMember("line_number"))
-                return "no 'line_number' attribute";
+                throw parse_exception{"no 'line_number' attribute"};
             if (!line["line_number"].IsUint())
-                return "'line_number' isn't uint";
+                throw parse_exception{"'line_number' isn't uint"};
             const auto line_number = line["line_number"].GetUint();
 
             if (!line.HasMember("count"))
-                return "no 'count' attribute";
+                throw parse_exception{"no 'count' attribute"};
             if (!line["count"].IsUint())
-                return "'count isn't uint";
+                throw parse_exception{"'count isn't uint"};
             const auto count = line["count"].GetUint();
             unexecute_block &= !count;
 
@@ -83,5 +83,4 @@ std::string parse_gcov_json(files_t& out,
                 lines_out.insert(itl, {line_number, unexecute_block});
         }
     }
-    return {};
 }

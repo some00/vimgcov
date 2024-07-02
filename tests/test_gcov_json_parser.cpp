@@ -8,12 +8,24 @@
 struct ParseGcovJsonTestFixture : ::testing::TestWithParam<
                                    std::tuple<std::string, files_t>> {};
 
+#define EXPECT_THROW_WITH_MSG(x, msg) \
+    do \
+    { \
+        try \
+        { \
+            x; \
+            FAIL() << "expression didn't throw"; \
+        } \
+        catch (const std::exception& ex) { \
+            EXPECT_STREQ(ex.what(), msg); \
+        } \
+    } while(false);
+
 TEST_P(ParseGcovJsonTestFixture, Test)
 {
     const auto& [json, expected_files] = GetParam();
     files_t files;
-    const auto err = parse_gcov_json(files, json, [] (auto) { return true;});
-    ASSERT_EQ(err, "");
+    parse_gcov_json(files, json, [] (auto) { return true;});
     EXPECT_EQ(expected_files, files);
 }
 
@@ -153,8 +165,8 @@ TEST(ParseGcovJsonTest, InvalidJson)
 {
     files_t out;
     const std::string invalid_json = "{ invalid json }";
-    const auto result = parse_gcov_json(out, invalid_json, filename_selector);
-    EXPECT_EQ(result, "parse error");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, invalid_json, filename_selector),
+                          "parse error");
 }
 
 // Test when root is not an object
@@ -162,8 +174,8 @@ TEST(ParseGcovJsonTest, RootNotObject)
 {
     files_t out;
     const std::string json = "[]";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "root isn't object");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "root isn't object");
 }
 
 // Test when 'files' attribute is missing
@@ -171,8 +183,8 @@ TEST(ParseGcovJsonTest, NoFilesAttribute)
 {
     files_t out;
     const std::string json = "{}";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no 'files' attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "no 'files' attribute");
 }
 
 // Test when 'files' isn't an array
@@ -180,8 +192,8 @@ TEST(ParseGcovJsonTest, FilesNotArray)
 {
     files_t out;
     const std::string json = "{\"files\": {}}";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'files' isn't array");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'files' isn't array");
 }
 
 // Test valid JSON input with no coverage data
@@ -194,8 +206,7 @@ TEST(ParseGcovJsonTest, ValidJsonNoCoverageData)
             "lines": []
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "");
+    parse_gcov_json(out, json, filename_selector);
     EXPECT_EQ(out["testfile.c"].size(), 0);
 }
 
@@ -217,8 +228,7 @@ TEST(ParseGcovJsonTest, ValidJsonWithCoverageData)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "");
+    parse_gcov_json(out, json, filename_selector);
     EXPECT_EQ(out["testfile.c"].size(), 2);
     EXPECT_EQ(std::get<0>(out["testfile.c"][0]), 1);
     EXPECT_EQ(std::get<1>(out["testfile.c"][0]), false);
@@ -235,8 +245,8 @@ TEST(ParseGcovJsonTest, NoFileAttribute)
             "lines": []
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no 'file' attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "no 'file' attribute");
 }
 
 // Test when 'file' isn't a string
@@ -249,8 +259,8 @@ TEST(ParseGcovJsonTest, FileNotString)
             "lines": []
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'file' isn't string");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'file' isn't string");
 }
 
 // Test when 'lines' attribute is missing
@@ -262,8 +272,8 @@ TEST(ParseGcovJsonTest, NoLinesAttribute)
             "file": "testfile.c"
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no lines attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "no lines attribute");
 }
 
 // Test when 'lines' isn't an array
@@ -276,8 +286,8 @@ TEST(ParseGcovJsonTest, LinesNotArray)
             "lines": {}
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'lines' isn't array");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'lines' isn't array");
 }
 
 // Test when 'line_number' attribute is missing
@@ -293,8 +303,8 @@ TEST(ParseGcovJsonTest, NoLineNumberAttribute)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no 'line_number' attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "no 'line_number' attribute");
 }
 
 // Test when 'line_number' isn't an uint
@@ -311,8 +321,8 @@ TEST(ParseGcovJsonTest, LineNumberNotUint)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'line_number' isn't uint");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'line_number' isn't uint");
 }
 
 // Test when 'unexecuted_block' attribute is missing
@@ -328,8 +338,8 @@ TEST(ParseGcovJsonTest, NoUnexecutedBlockAttribute)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no unexecute_block attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                                          "no unexecute_block attribute");
 }
 
 // Test when 'unexecuted_block' isn't a bool
@@ -346,8 +356,8 @@ TEST(ParseGcovJsonTest, UnexecutedBlockNotBool)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'unexecuted_block' isn't bool");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'unexecuted_block' isn't bool");
 }
 
 // Test when 'count' attribute is missing
@@ -363,8 +373,8 @@ TEST(ParseGcovJsonTest, NoCountAttribute)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "no 'count' attribute");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "no 'count' attribute");
 }
 
 // Test when 'count' isn't an uint
@@ -381,8 +391,8 @@ TEST(ParseGcovJsonTest, CountNotUint)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "'count isn't uint");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "'count isn't uint");
 }
 
 // Test when 'file' isn't an object
@@ -392,8 +402,8 @@ TEST(ParseGcovJsonTest, FileIsNotAnObject)
     const std::string json = R"({
         "files": [123]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "file isn't object");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "file isn't object");
 }
 
 // Test when filename selector skips a file
@@ -405,9 +415,7 @@ TEST(ParseGcovJsonTest, FilenameSelectorSkips)
             "file": "testfile.c"
         }]
     })";
-    const auto result = parse_gcov_json(out, json,
-                                        [] (const auto f) { return false; });
-    EXPECT_EQ(result, "");
+    parse_gcov_json(out, json, [] (const auto f) { return false; });
     EXPECT_EQ(out.size(), 0);
 }
 
@@ -421,8 +429,8 @@ TEST(ParseGcovJsonTest, LineIsNotAnObject)
             "lines": [123]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "line isn't object");
+    EXPECT_THROW_WITH_MSG(parse_gcov_json(out, json, filename_selector),
+                          "line isn't object");
 }
 
 // Test when 'unexecuted_block' is set but 'count' is not zero
@@ -443,8 +451,7 @@ TEST(ParseGcovJsonTest, UnexecutedBlockWithNonZeroCount)
             }]
         }]
     })";
-    const auto result = parse_gcov_json(out, json, filename_selector);
-    EXPECT_EQ(result, "");
+    parse_gcov_json(out, json, filename_selector);
     EXPECT_EQ(out["testfile.c"].size(), 1);
     EXPECT_EQ(std::get<0>(out["testfile.c"][0]), 1);
     EXPECT_EQ(std::get<1>(out["testfile.c"][0]), false);

@@ -69,13 +69,17 @@ files_t getcoverage(
             per_proc.erase(it);
             return;
         }
-        const auto err_str = parse_gcov_json(rv, buf,
-                                             [&path] (const auto& x) {
-                                                 return x == path; }
-        );
+        try
+        {
+            parse_gcov_json(
+                rv, buf, [&path] (const auto& x) { return x == path; }
+            );
+        }
+        catch (const parse_exception& ex)
+        {
+            std::cerr << "error in gcov json file: " << ex.what() << std::endl;
+        }
         per_proc.erase(it);
-        if (!err_str.empty())
-            std::cerr << "error in gcov json file: " << err_str << std::endl;
     };
 
     while (!gcnos.empty())
