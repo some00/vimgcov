@@ -43,7 +43,6 @@ std::string parse_gcov_json(files_t& out,
             itf = out.find(filename);
         }
         auto& lines_out = itf->second;
-        auto itl = lines_out.begin();
 
         if (!file.HasMember("lines"))
             return "no lines attribute";
