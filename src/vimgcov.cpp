@@ -97,5 +97,6 @@ files_t getcoverage(
 
 PYBIND11_MODULE(_vimgcov, m)
 {
-    m.def("getcoverage", getcoverage);
+    m.def("getcoverage", getcoverage,
+          py::arg("gcnos"), py::arg("j"), py::arg("path"));
 }

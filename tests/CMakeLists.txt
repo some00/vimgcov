@@ -16,9 +16,17 @@ target_compile_definitions(test_gcov_json_parser PRIVATE
 target_include_directories(test_gcov_json_parser PRIVATE ${source_dir})
 add_test(NAME test_gcov_json_parser COMMAND test_gcov_json_parser)
 
-add_test(NAME test_get_coverage_gcov_lines
+add_test(
+    NAME test_get_coverage_gcov_lines
     COMMAND
         ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}/python
         ${Python3_EXECUTABLE} -m pytest
             ${CMAKE_CURRENT_SOURCE_DIR}/test_vimgcov.py
+)
+add_test(
+    NAME test_vimgcov_module
+    COMMAND
+        ${CMAKE_COMMAND} -E env PYTHONPATH=$<TARGET_FILE_DIR:_vimgcov>
+        ${Python3_EXECUTABLE} -m pytest -vvv
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_vimgcov_module.py
 )
