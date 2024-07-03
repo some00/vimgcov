@@ -1,5 +1,6 @@
 #include "gcov_json_handler.hpp"
 #include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 
 #ifdef spdlog_FOUND
 #include <spdlog/spdlog.h>
@@ -8,34 +9,42 @@
 #define TRACE(...) (void)0
 #endif
 
-using rapidjson::Document;
 
 void parse_gcov_json(files_t& out,
                      const std::string& buf,
                      filename_selector_t filename_selector)
 {
-    Document d;
-    if (d.Parse(buf.c_str()).HasParseError())
-        throw parse_exception{"parse error"};
-    if (!d.IsObject())
-        throw parse_exception{"root isn't object"};
-    if (!d.HasMember("files"))
-        throw parse_exception{"no 'files' attribute"};
-    if (!d["files"].IsArray())
-        throw parse_exception{"'files' isn't array"};
-    const auto files = d["files"].GetArray();
-    for (const auto& file : files)
+    rapidjson::Document doc;
+    doc.Parse(buf.c_str());
+
+    if (doc.HasParseError())
+        throw parse_exception{
+            "JSON parse error: " + std::string(rapidjson::GetParseError_En(
+            doc.GetParseError())) + " (offset " + std::to_string(
+            doc.GetErrorOffset()) + ")"};
+
+    if (!doc.IsObject())
+        throw parse_exception{"JSON root is not an object"};
+
+    if (!doc.HasMember("files") || !doc["files"].IsArray())
+        throw parse_exception{"JSON does not contain a valid 'files' array"};
+
+    const auto& files = doc["files"];
+    for (const auto& file : files.GetArray())
     {
         if (!file.IsObject())
-            throw parse_exception{"file isn't object"};
+            throw parse_exception{"File entry isn't an object"};
+        if (!file.HasMember("file") || !file["file"].IsString())
+            throw parse_exception{
+                "File entry missing 'file' string attribute"};
 
-        if (!file.HasMember("file"))
-            throw parse_exception{"no 'file' attribute"};
-        if (!file["file"].IsString())
-            throw parse_exception{"'file' isn't string"};
-        const auto filename = file["file"].GetString();
-        if (!filename_selector(filename))
+        const auto &filename = file["file"].GetString();
+        if (filename_selector && !filename_selector(filename))
+        {
+            TRACE("Skipping file: {}", filename);
             continue;
+        }
+
         auto itf = out.find(filename);
         if (itf == out.end())
         {
@@ -44,32 +53,32 @@ void parse_gcov_json(files_t& out,
         }
         auto& lines_out = itf->second;
 
-        if (!file.HasMember("lines"))
-            throw parse_exception{"no lines attribute"};
-        if (!file["lines"].IsArray())
-            throw parse_exception{"'lines' isn't array"};
-        const auto lines = file["lines"].GetArray();
-        for (const auto& line : lines)
+        if (!file.HasMember("lines") || !file["lines"].IsArray())
+            throw parse_exception{
+                "File entry for '" + std::string(filename) +
+                "' missing 'lines' array"};
+
+        const auto &lines = file["lines"];
+        for (const auto &line : lines.GetArray())
         {
             if (!line.IsObject())
-                throw parse_exception{"line isn't object"};
-
-            if (!line.HasMember("unexecuted_block"))
-                throw parse_exception{"no unexecute_block attribute"};
-            if (!line["unexecuted_block"].IsBool())
-                throw parse_exception{"'unexecuted_block' isn't bool"};
-            auto unexecute_block = line["unexecuted_block"].GetBool();
-
-            if (!line.HasMember("line_number"))
-                throw parse_exception{"no 'line_number' attribute"};
-            if (!line["line_number"].IsUint())
-                throw parse_exception{"'line_number' isn't uint"};
+                throw parse_exception{"Line entry isn't an object"};
+            if (!line.HasMember("line_number") || !line["line_number"].IsInt())
+                throw parse_exception{
+                    "Line entry in file '" + std::string(filename) +
+                    "' missing 'line_number' integer attribute"};
             const auto line_number = line["line_number"].GetUint();
 
-            if (!line.HasMember("count"))
-                throw parse_exception{"no 'count' attribute"};
-            if (!line["count"].IsUint())
-                throw parse_exception{"'count isn't uint"};
+            if (!line.HasMember("count") || !line["count"].IsInt())
+                throw parse_exception{
+                    "Line entry in file '" + std::string(filename) +
+                    "' missing 'count' integer attribute"};
+            if (!line.HasMember("unexecuted_block") ||
+                !line["unexecuted_block"].IsBool())
+                throw parse_exception{"Unexecuted block isn't boolean"};
+            auto unexecute_block = line["unexecuted_block"].GetBool();
+
+
             const auto count = line["count"].GetUint();
             unexecute_block &= !count;
 
