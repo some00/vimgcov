@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest pytest-cov gcovr
-        sudo apt install libboost-dev
+        sudo apt install libboost-all-dev
 
     - name: Configure CMake
       run: cmake -S . _build \
