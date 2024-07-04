@@ -21,10 +21,10 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest pytest-cov gcovr
-        sudo apt install libboost-all-dev
+        sudo apt install libboost-all-dev pybind11-dev rapidjson-dev
 
     - name: Configure CMake
-      run: cmake -S . _build \
+      run: cmake -S . build \
         -DCMAKE_C_FLAGS=--coverage \
         -DCMAKE_CXX_FLAGS=--coverage \
         -DCMAKE_BUILD_TYPE=Debug
@@ -37,13 +37,14 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        gcovr -r . --xml-pretty -o build/coverage.xml -e build
+        mkdir -p coverage/cpp
+        gcovr -r . --xml-pretty -o coverage/cpp/coverage.xml -e build
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./build/coverage.xml
+        files: ./coverage/cpp/coverage.xml,./coverage/python/coverage.xml
         flags: unittests
         name: codecov-coverage
         fail_ci_if_error: true

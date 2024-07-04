@@ -22,6 +22,7 @@ add_test(
     ${Python3_EXECUTABLE} -m pytest
         --cov=${PROJECT_SOURCE_DIR}/python
         --cov-report html:${PROJECT_SOURCE_DIR}/coverage/python
+        --cov-report xml:${PROJECT_SOURCE_DIR}/coverage/python/coverage.xml
         ${CMAKE_CURRENT_SOURCE_DIR}/test_vimgcov.py
 )
 add_test(
