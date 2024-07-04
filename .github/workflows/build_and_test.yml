@@ -1,0 +1,48 @@
+name: vimgcov build and test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up CMake
+      uses: lukka/get-cmake@v3
+
+    - name: Install dependencies
+      run: |
+        pip install pytest pytest-cov gcovr
+
+    - name: Configure CMake
+      run: cmake -S . _build \
+        -DCMAKE_C_FLAGS=--coverage \
+        -DCMAKE_CXX_FLAGS=--coverage \
+        -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build
+      run: cmake --build build -j`nproc`
+
+    - name: Run tests
+      run: cmake --build build -j`nproc` --target test
+
+    - name: Generate coverage report
+      run: |
+        gcovr -r . --xml-pretty -o build/coverage.xml -e build
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./build/coverage.xml
+        flags: unittests
+        name: codecov-coverage
+        fail_ci_if_error: true
