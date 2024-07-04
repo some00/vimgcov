@@ -23,6 +23,8 @@ def cpp_code():
     """
 
 
+# TODO investigate
+@pytest.mark.skip(reason="Github Actions throws Bad file descrtiptor")
 def test_getcoverage(tmp_path, cpp_code):
     # Create paths for test files
     test_cpp_file = tmp_path / "test.cpp"
