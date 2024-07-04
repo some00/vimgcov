@@ -22,7 +22,7 @@ jobs:
       run: |
         pip install pytest pytest-cov gcovr
         sudo apt install libboost-all-dev pybind11-dev rapidjson-dev \
-          libgtest-dev
+          libgtest-dev libspdlog-dev
 
     - name: Configure CMake
       run: cmake -S . build \
