@@ -34,7 +34,7 @@ jobs:
       run: cmake --build build -j`nproc`
 
     - name: Run tests
-      run: cmake --build build -j`nproc` --target test
+      run: CTEST_OUTPUT_ON_FAILURE=ON cmake --build build -j`nproc` --target test
 
     - name: Generate coverage report
       run: |
