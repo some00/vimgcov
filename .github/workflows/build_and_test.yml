@@ -21,14 +21,10 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest pytest-cov gcovr
-        sudo apt install libboost-all-dev pybind11-dev rapidjson-dev \
-          libgtest-dev libspdlog-dev
+        sudo apt install libboost-all-dev pybind11-dev rapidjson-dev libgtest-dev libspdlog-dev
 
     - name: Configure CMake
-      run: cmake -S . build \
-        -DCMAKE_C_FLAGS=--coverage \
-        -DCMAKE_CXX_FLAGS=--coverage \
-        -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -S . build -DCMAKE_C_FLAGS=--coverage -DCMAKE_CXX_FLAGS=--coverage -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build
       run: cmake --build build -j`nproc`
