@@ -21,14 +21,10 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest pytest-cov gcovr
-        sudo apt install libboost-all-dev pybind11-dev rapidjson-dev \
-          libgtest-dev libspdlog-dev
+        sudo apt install libboost-all-dev pybind11-dev rapidjson-dev libgtest-dev libspdlog-dev
 
     - name: Configure CMake
-      run: cmake -S . build \
-        -DCMAKE_C_FLAGS=--coverage \
-        -DCMAKE_CXX_FLAGS=--coverage \
-        -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -S . build -DCMAKE_C_FLAGS=--coverage -DCMAKE_CXX_FLAGS=--coverage -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build
       run: cmake --build build -j`nproc`
@@ -39,7 +35,7 @@ jobs:
     - name: Generate coverage report
       run: |
         mkdir -p coverage/cpp
-        gcovr -r . --xml-pretty -o coverage/cpp/coverage.xml -e build
+        gcovr -r . --xml-pretty -o coverage/cpp/coverage.xml -e build --exclude-throw-branches
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
