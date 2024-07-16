@@ -15,5 +15,5 @@ function! vimgcov#GetCoverage(filename) abort
 endfunction
 
 function! vimgcov#IsAvailable(unused_filename) abort
-    return &filetype is# 'cpp' || &filetype is# 'c'
+    return &filetype is# 'cpp' || &filetype is# 'c' || &filetype is# 'rust'
 endfunction
