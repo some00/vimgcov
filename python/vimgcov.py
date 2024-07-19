@@ -9,6 +9,7 @@ from collections import defaultdict
 
 
 DEPS_DIR = Path("./target/debug/deps")
+# TODO make it configurable
 LLVM_PROFDATA = "llvm-profdata"
 LLVM_COV = "llvm-cov"
 
@@ -66,6 +67,10 @@ def llvm_cov(filename, file, cover_dict, profdata):
         data_array = json.loads(stdout.decode())["data"]
     except json.JSONDecodeError:
         return
+    llvm_cov_parse(data_array, filename, cover_dict)
+
+
+def llvm_cov_parse(data_array, filename, cover_dict):
     for data in data_array:
         for file in data["files"]:
             if file["filename"] != str(filename):
@@ -88,11 +93,16 @@ def get_llvm_rust_coverage_lines(filename):
     cover_dict = defaultdict(lambda: False)
     with tempfile.TemporaryDirectory() as directory:
         profdata = os.path.join(directory, "a.profdata")
-        subprocess.check_call([
+        proc = subprocess.Popen([
             LLVM_PROFDATA, "merge",
             "-o", profdata,
             *map(str, Path(".").rglob("*.profraw")),
-        ])
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if proc.returncode != 0:
+            print(stdout.decode())
+            print(stderr.decode())
+            return
         for file in DEPS_DIR.iterdir():
             llvm_cov(filename, file, cover_dict, profdata)
     return convert_dict_to_arrays(cover_dict)
