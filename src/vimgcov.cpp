@@ -5,15 +5,23 @@
 #include <pybind11/stl.h>
 #include <rapidjson/reader.h>
 #include <memory>
+#include <functional>
 
 #include "gcov_json_handler.hpp"
 
 namespace py = pybind11;
 
-files_t getcoverage(
-    std::deque<std::string> gcnos,
-    unsigned j,
-    const std::string& path)
+files_t process_files(
+    std::function<std::unique_ptr<boost::process::child>(
+        const std::string&,
+        boost::process::async_pipe&,
+        boost::process::async_pipe&,
+        boost::asio::io_context&
+    )> start_process,
+    std::function<void(files_t&, const std::string&)> parse_json,
+    std::deque<std::string> files,
+    unsigned j
+)
 {
     struct per_proc_t
     {
@@ -32,21 +40,13 @@ files_t getcoverage(
         boost::process::async_pipe ap_out{ctx};
         std::string buf;
         std::string err;
-        auto c = std::make_unique<boost::process::child>(
-            boost::process::search_path("gcov"),
-            "--stdout",
-            "--json-format",
-            gcnos.back(),
-            boost::process::std_out > ap_out,
-            boost::process::std_err > ap_err,
-            ctx
-        );
+        auto c = start_process(files.back(), ap_err, ap_out, ctx);
         per_proc.emplace_back(per_proc_t{.std_out_pipe=std::move(ap_out),
                                          .std_out=std::move(buf),
                                          .child=std::move(c),
                                          .std_err_pipe=std::move(ap_err),
                                          .std_err=std::move(err),
-                                         .gcno=std::move(gcnos.back()),
+                                         .gcno=std::move(files.back()),
                                          });
         auto& pp = per_proc.back();
         boost::asio::async_read(pp.std_out_pipe,
@@ -55,7 +55,7 @@ files_t getcoverage(
         boost::asio::async_read(pp.std_err_pipe,
                                 boost::asio::dynamic_buffer(pp.std_err),
                                 [] (auto, auto) {});
-        gcnos.pop_back();
+        files.pop_back();
     };
     auto pop = [&] {
         auto it = per_proc.begin();
@@ -71,9 +71,7 @@ files_t getcoverage(
         }
         try
         {
-            parse_gcov_json(
-                rv, buf, [&path] (const auto& x) { return x == path; }
-            );
+            parse_json(rv, buf);
         }
         catch (const parse_exception& ex)
         {
@@ -82,10 +80,10 @@ files_t getcoverage(
         per_proc.erase(it);
     };
 
-    while (!gcnos.empty())
+    while (!files.empty())
     {
         ctx.restart();
-        while (per_proc.size() < j && !gcnos.empty())
+        while (per_proc.size() < j && !files.empty())
             push();
         ctx.run();
         while (!per_proc.empty())
@@ -94,9 +92,49 @@ files_t getcoverage(
     return rv;
 }
 
+files_t getcoverage(
+    std::deque<std::string> gcnos,
+    unsigned j,
+    const std::string& path)
+{
+    return process_files(
+        [] (const auto& file, auto& ap_err, auto& ap_out, auto& ctx) {
+            return std::make_unique<boost::process::child>(
+                boost::process::search_path("gcov"),
+                "--stdout",
+                "--json-format",
+                file,
+                boost::process::std_out > ap_out,
+                boost::process::std_err > ap_err,
+                ctx
+            );
+        },
+        [&path] (auto& files, const auto& buf) {
+            parse_gcov_json(files, buf, [&path] (const auto& x) {
+                return x == path;
+            });
+        },
+        gcnos,
+        j
+    );
+}
+
+
+files_t getllvmcoverage(
+    std::deque<std::string> executables,
+    unsigned j,
+    const std::string& path,
+    const std::string& profdata)
+{
+    // TODO
+    return {};
+}
 
 PYBIND11_MODULE(_vimgcov, m)
 {
     m.def("getcoverage", getcoverage,
           py::arg("gcnos"), py::arg("j"), py::arg("path"));
+    m.def("getllvmcoverage", getllvmcoverage,
+          py::arg("executables"), py::arg("unsigned"), py::arg("path"),
+          py::arg("profdata"));
 }
