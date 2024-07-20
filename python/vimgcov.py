@@ -14,6 +14,31 @@ LLVM_PROFDATA = "llvm-profdata"
 LLVM_COV = "llvm-cov"
 
 
+def get_llvm_rust_coverage_lines_native(filename):
+    if not DEPS_DIR.is_dir():
+        raise FileNotFoundError("No deps directory found")
+    with tempfile.TemporaryDirectory() as directory:
+        profdata = os.path.join(directory, "a.profdata")
+        proc = subprocess.Popen([
+            LLVM_PROFDATA, "merge",
+            "-o", profdata,
+            *map(str, Path(".").rglob("*.profraw")),
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if proc.returncode != 0:
+            print(stdout.decode())
+            print(stderr.decode())
+            return
+
+        def filter_file(file):
+            return file.is_file() and os.access(str(file), os.X_OK)
+        executables = list(map(filter_file, DEPS_DIR.iterdir()))
+        files = _vimgcov.getllvmcoverage(executables,
+                                         multiprocessing.cpu_count(),
+                                         filename, profdata)
+    return process_return_value(filename, files)
+
+
 def get_gcc_coverage_gcov_lines(filename):
     # Search for all .gcno files in the current directory and subdirectories
     gcnos = list(map(str, Path('.').rglob("*.gcno")))
@@ -21,6 +46,10 @@ def get_gcc_coverage_gcov_lines(filename):
     # Get coverage information using _vimgcov module
     files = _vimgcov.getcoverage(gcnos, multiprocessing.cpu_count(), filename)
 
+    return process_return_value(filename, files)
+
+
+def process_return_value(filename, files):
     # Ensure files contains the requested filename
     if filename not in files:
         raise KeyError(f"Coverage data for file {filename} not found.")
@@ -124,6 +153,9 @@ def GetCoverageGcovLines(filename):
         raise FileNotFoundError(f"File {filename} not found.")
 
     if Path(filename).suffix == ".rs":
-        return get_llvm_rust_coverage_lines(filename)
+        if False:
+            return get_llvm_rust_coverage_lines(filename)
+        else:
+            return get_llvm_rust_coverage_lines_native(filename)
     else:
         return get_gcc_coverage_gcov_lines(filename)

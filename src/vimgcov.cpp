@@ -100,7 +100,7 @@ files_t getcoverage(
     return process_files(
         [] (const auto& file, auto& ap_err, auto& ap_out, auto& ctx) {
             return std::make_unique<boost::process::child>(
-                boost::process::search_path("gcov"),
+                boost::process::search_path("gcov"), // TODO configurable
                 "--stdout",
                 "--json-format",
                 file,
@@ -126,8 +126,26 @@ files_t getllvmcoverage(
     const std::string& path,
     const std::string& profdata)
 {
-    // TODO
-    return {};
+    return process_files(
+        [&profdata] (const auto& file, auto& ap_err, auto& ap_out, auto& ctx) {
+            return std::make_unique<boost::process::child>(
+                boost::process::search_path("llvm-cov"), "export", // TODO configurable
+                "-instr-profile", profdata,
+                "-format=text", file,
+                boost::process::std_out > ap_out,
+                boost::process::std_err> ap_err,
+                ctx
+            );
+        },
+        [&path] (auto& files, const auto& buf) {
+            ; // TODO
+            parse_llvm_json(files, buf, [&path] (const auto& x) {
+                    return x == path;
+            });
+        },
+        executables,
+        j
+    );
 }
 
 PYBIND11_MODULE(_vimgcov, m)
