@@ -1,6 +1,7 @@
 #include "gcov_json_handler.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
+#include <fstream>
 
 #ifdef spdlog_FOUND
 #include <spdlog/spdlog.h>
@@ -10,6 +11,14 @@
 #endif
 
 namespace {
+
+void debug(const char* msg)
+{
+    std::ofstream out;
+    out.open("/tmp/vimgcov.log", std::ios_base::app);
+    out << msg;
+}
+
 rapidjson::Document parse_json(const std::string& buf)
 {
     rapidjson::Document doc;
@@ -115,94 +124,104 @@ void parse_llvm_json(files_t& out,
     if (!doc.IsObject())
         throw parse_exception{"JSON root is not an object"};
 
-    if (!doc.HasMember("data") || !doc["data"].IsObject())
+    if (!doc.HasMember("data") || !doc["data"].IsArray())
         throw parse_exception{"JSON does not contain a valid 'data' object"};
-    const auto& data = doc["data"];
 
-    if (!data.HasMember("files") || !data["files"].IsArray())
-        throw parse_exception{"JSON does not contain a valid 'files' array"};
-    const auto& files = data["files"].GetArray();
-
-    for (const auto& file : files)
+    for (const auto& data : doc["data"].GetArray())
     {
-        if (!file.HasMember("filename") || !file["filename"].IsString())
-            throw parse_exception{"File object without 'filename' attribute"};
-        const auto& filename = file["filename"].GetString();
+        if (!data.IsObject() ||
+            !data.HasMember("files") ||
+            !data["files"].IsArray()
+        )
+            throw parse_exception{"JSON does not contain a valid 'files' array"};
+        const auto& files = data["files"].GetArray();
 
-        if (filename_selector && !filename_selector(filename))
+        for (const auto& file : files)
         {
-            TRACE("Skipping file: {}", filename);
-            continue;
-        }
-
-        auto [itf, _] = out.insert({filename, {}});
-        auto& lines_out = itf->second;
-
-        if (!file.HasMember("segments") || !file["segments"].IsArray())
-            throw parse_exception{"File object without 'segments' array"};
-
-        const auto& segments = file["segments"].GetArray();
-        for (const auto& segment_json : segments)
-        {
-            if (!segment_json.IsArray())
-                throw parse_exception{"Segment isn't an array"};
-            const auto& segment = segment_json.GetArray();
-            enum SegmentIndices
-            {
-                LINE, COL, COUNT, HAS_COUNT, IS_REGION_ENTRY, IS_GAP_REGION
-            };
-            if (segment.Size() < 6 ||
-                !segment[LINE].IsUint() ||
-                !segment[COUNT].IsUint() ||
-                !segment[HAS_COUNT].IsBool() ||
-                !segment[IS_REGION_ENTRY].IsBool() ||
-                !segment[IS_GAP_REGION].IsBool())
-                throw parse_exception{"Invalid segment array"};
-            if (!segment[HAS_COUNT].GetBool() ||
-                !segment[IS_REGION_ENTRY].GetBool() ||
-                segment[IS_GAP_REGION].GetBool())
-                continue;
-            add_line(lines_out, segment[LINE].GetUint(),
-                     !segment[COUNT].GetUint()
-            );
-        }
-
-        if (!file.HasMember("functions") || !file["functions"].IsArray())
-            throw parse_exception{"File object without 'functions' array"};
-        const auto& functions = file["functions"].GetArray();
-        for (const auto& function : functions)
-        {
-            if (!function.HasMember("filename") ||
-                function["filename"].IsString())
+            if (!file.HasMember("filename") || !file["filename"].IsString())
                 throw parse_exception{
-                    "Function object without 'filename' string"};
-            if (filename_selector &&
-                !filename_selector(function["filename"].GetString()))
-                continue;
-            if (!function.HasMember("regions") ||
-                !function["regions"].IsArray())
-                throw parse_exception{
-                    "Function object without 'regions' array"};
-            const auto& regions = function["regions"].GetArray();
-            for (const auto& region_json : regions)
+                    "File object without 'filename' attribute"};
+            const auto& filename = file["filename"].GetString();
+
+            if (filename_selector && !filename_selector(filename))
             {
-                enum RegionIndices
+                TRACE("Skipping file: {}", filename);
+                continue;
+            }
+
+            auto [itf, _] = out.insert({filename, {}});
+            auto& lines_out = itf->second;
+
+            if (!file.HasMember("segments") || !file["segments"].IsArray())
+                throw parse_exception{"File object without 'segments' array"};
+
+            const auto& segments = file["segments"].GetArray();
+            for (const auto& segment_json : segments)
+            {
+                if (!segment_json.IsArray())
+                    throw parse_exception{"Segment isn't an array"};
+                const auto& segment = segment_json.GetArray();
+                enum SegmentIndices
                 {
-                    LINE_START, COLUMN_START, LINE_END, COLUMN_END,
-                    EXECUTION_COUNT, FILE_ID, EXPANDED_FILE_ID,
+                    LINE, COL, COUNT, HAS_COUNT, IS_REGION_ENTRY, IS_GAP_REGION
                 };
-
-                if (!region_json.IsArray())
-                    throw parse_exception{"Region is not an array"};
-                const auto& region = region_json.GetArray();
-                if (region.Size() < 7 ||
-                    !region[LINE_START].IsUint() ||
-                    !region[EXECUTION_COUNT].IsUint())
-                    throw parse_exception{"Invalid region array"};
-                add_line(lines_out,
-                        region[LINE_START].GetUint(),
-                        !region[EXECUTION_COUNT].GetUint()
+                if (segment.Size() < 6 ||
+                    !segment[LINE].IsUint() ||
+                    !segment[COUNT].IsUint() ||
+                    !segment[HAS_COUNT].IsBool() ||
+                    !segment[IS_REGION_ENTRY].IsBool() ||
+                    !segment[IS_GAP_REGION].IsBool()
+                )
+                    throw parse_exception{"Invalid segment array"};
+                if (!segment[HAS_COUNT].GetBool() ||
+                    !segment[IS_REGION_ENTRY].GetBool() ||
+                    segment[IS_GAP_REGION].GetBool()
+                )
+                    continue;
+                add_line(lines_out, segment[LINE].GetUint(),
+                        !segment[COUNT].GetUint()
                 );
+            }
+
+            if (!file.HasMember("functions") || !file["functions"].IsArray())
+                throw parse_exception{"File object without 'functions' array"};
+            const auto& functions = file["functions"].GetArray();
+            for (const auto& function : functions)
+            {
+                if (!function.HasMember("filename") ||
+                    function["filename"].IsString())
+                    throw parse_exception{
+                        "Function object without 'filename' string"};
+                if (filename_selector &&
+                    !filename_selector(function["filename"].GetString()))
+                    continue;
+                if (!function.HasMember("regions") ||
+                    !function["regions"].IsArray()
+                )
+                    throw parse_exception{
+                        "Function object without 'regions' array"};
+                const auto& regions = function["regions"].GetArray();
+                for (const auto& region_json : regions)
+                {
+                    enum RegionIndices
+                    {
+                        LINE_START, COLUMN_START, LINE_END, COLUMN_END,
+                        EXECUTION_COUNT, FILE_ID, EXPANDED_FILE_ID,
+                    };
+
+                    if (!region_json.IsArray())
+                        throw parse_exception{"Region is not an array"};
+                    const auto& region = region_json.GetArray();
+                    if (region.Size() < 7 ||
+                        !region[LINE_START].IsUint() ||
+                        !region[EXECUTION_COUNT].IsUint()
+                    )
+                        throw parse_exception{"Invalid region array"};
+                    add_line(lines_out,
+                            region[LINE_START].GetUint(),
+                            !region[EXECUTION_COUNT].GetUint()
+                    );
+                }
             }
         }
     }

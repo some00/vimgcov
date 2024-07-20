@@ -14,6 +14,11 @@ LLVM_PROFDATA = "llvm-profdata"
 LLVM_COV = "llvm-cov"
 
 
+def debug(*args, **kwargs):
+    with open("/tmp/vimgcov.log", "a") as f:
+        print(*args, file=f, **kwargs)
+
+
 def get_llvm_rust_coverage_lines_native(filename):
     if not DEPS_DIR.is_dir():
         raise FileNotFoundError("No deps directory found")
@@ -32,7 +37,7 @@ def get_llvm_rust_coverage_lines_native(filename):
 
         def filter_file(file):
             return file.is_file() and os.access(str(file), os.X_OK)
-        executables = list(map(filter_file, DEPS_DIR.iterdir()))
+        executables = list(map(str, filter(filter_file, DEPS_DIR.iterdir())))
         files = _vimgcov.getllvmcoverage(executables,
                                          multiprocessing.cpu_count(),
                                          filename, profdata)
