@@ -4,8 +4,6 @@ import _vimgcov
 import tempfile
 import subprocess
 import os
-import json
-from collections import defaultdict
 
 
 DEPS_DIR = Path("./target/debug/deps")
@@ -19,7 +17,7 @@ def debug(*args, **kwargs):
         print(*args, file=f, **kwargs)
 
 
-def get_llvm_rust_coverage_lines_native(filename):
+def get_llvm_rust_coverage_lines(filename):
     if not DEPS_DIR.is_dir():
         raise FileNotFoundError("No deps directory found")
     with tempfile.TemporaryDirectory() as directory:
@@ -75,73 +73,6 @@ def process_return_value(filename, files):
     return covered, uncovered
 
 
-def convert_dict_to_arrays(cover_dict):
-    covered_lines = []
-    uncovered_lines = []
-    for lineno, covered in cover_dict.items():
-        if covered:
-            covered_lines.append(lineno)
-        else:
-            uncovered_lines.append(lineno)
-    return covered_lines, uncovered_lines
-
-
-def llvm_cov(filename, file, cover_dict, profdata):
-    if not file.is_file():
-        return
-    if not os.access(str(file), os.X_OK):
-        return
-    proc = subprocess.Popen([
-        LLVM_COV, "export",
-        "-instr-profile", profdata,
-        "-format=text", str(file),
-    ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate()
-    try:
-        data_array = json.loads(stdout.decode())["data"]
-    except json.JSONDecodeError:
-        return
-    llvm_cov_parse(data_array, filename, cover_dict)
-
-
-def llvm_cov_parse(data_array, filename, cover_dict):
-    for data in data_array:
-        for file in data["files"]:
-            if file["filename"] != str(filename):
-                continue
-            for segment in file["segments"]:
-                if not segment[3] or not segment[4] or segment[5]:
-                    continue
-                cover_dict[segment[0]] |= bool(segment[2])
-        for function in data["functions"]:
-            if str(filename) not in function["filenames"]:
-                continue
-            for region in function["regions"]:
-                for lineno in range(region[0], region[2]):
-                    cover_dict[lineno] |= bool(region[4])
-
-
-def get_llvm_rust_coverage_lines(filename):
-    if not DEPS_DIR.is_dir():
-        raise FileNotFoundError("No deps directory found")
-    cover_dict = defaultdict(lambda: False)
-    with tempfile.TemporaryDirectory() as directory:
-        profdata = os.path.join(directory, "a.profdata")
-        proc = subprocess.Popen([
-            LLVM_PROFDATA, "merge",
-            "-o", profdata,
-            *map(str, Path(".").rglob("*.profraw")),
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
-        if proc.returncode != 0:
-            print(stdout.decode())
-            print(stderr.decode())
-            return
-        for file in DEPS_DIR.iterdir():
-            llvm_cov(filename, file, cover_dict, profdata)
-    return convert_dict_to_arrays(cover_dict)
-
-
 def GetCoverageGcovLines(filename):
     """
     Retrieves the covered and uncovered lines for the given filename using
@@ -158,9 +89,12 @@ def GetCoverageGcovLines(filename):
         raise FileNotFoundError(f"File {filename} not found.")
 
     if Path(filename).suffix == ".rs":
-        if False:
-            return get_llvm_rust_coverage_lines(filename)
-        else:
-            return get_llvm_rust_coverage_lines_native(filename)
+        return get_llvm_rust_coverage_lines(filename)
     else:
         return get_gcc_coverage_gcov_lines(filename)
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+    pprint(GetCoverageGcovLines("/home/tkonya/tmp/serde/"
+                                "serde/src/ser/impls.rs"))
