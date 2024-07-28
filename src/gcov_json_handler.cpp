@@ -12,13 +12,6 @@
 
 namespace {
 
-void debug(const char* msg)
-{
-    std::ofstream out;
-    out.open("/tmp/vimgcov.log", std::ios_base::app);
-    out << msg;
-}
-
 rapidjson::Document parse_json(const std::string& buf)
 {
     rapidjson::Document doc;
