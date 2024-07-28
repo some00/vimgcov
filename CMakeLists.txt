@@ -19,6 +19,7 @@ target_link_libraries(_vimgcov PRIVATE
     Boost::filesystem
     PkgConfig::RapidJSON
 )
+target_include_directories(_vimgcov PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(ENABLE_TESTS)
     set(source_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)

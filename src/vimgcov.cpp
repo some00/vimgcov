@@ -1,13 +1,10 @@
-#include <boost/process.hpp>
+#include "vimgcov.hpp"
 #include <boost/asio.hpp>
 #include <iostream>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <rapidjson/reader.h>
 #include <memory>
-#include <functional>
-
-#include "gcov_json_handler.hpp"
 
 namespace py = pybind11;
 
@@ -138,7 +135,6 @@ files_t getllvmcoverage(
             );
         },
         [&path] (auto& files, const auto& buf) {
-            ; // TODO
             parse_llvm_json(files, buf, [&path] (const auto& x) {
                     return x == path;
             });
