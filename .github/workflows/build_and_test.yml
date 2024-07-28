@@ -35,7 +35,7 @@ jobs:
     - name: Generate coverage report
       run: |
         mkdir -p coverage/cpp
-        gcovr -r . --xml-pretty -o coverage/cpp/coverage.xml -e build --exclude-throw-branches
+        gcovr -r . --xml-pretty -o coverage/cpp/coverage.xml -e build -e tests --exclude-throw-branches
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
