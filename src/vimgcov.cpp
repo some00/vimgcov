@@ -127,6 +127,7 @@ files_t getllvmcoverage(
         [&profdata] (const auto& file, auto& ap_err, auto& ap_out, auto& ctx) {
             return std::make_unique<boost::process::child>(
                 boost::process::search_path("llvm-cov"), "export", // TODO configurable
+                "-debuginfod=false",
                 "-instr-profile", profdata,
                 "-format=text", file,
                 boost::process::std_out > ap_out,
