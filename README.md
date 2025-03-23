@@ -1,3 +1,6 @@
+![Build Status](https://github.com/some00/vimgcov/actions/workflows/build_and_test.yml/badge.svg) ![License](https://img.shields.io/github/license/some00/vimgcov) ![Codecov](https://codecov.io/gh/some00/vimgcov/branch/main/graph/badge.svg)
+
+
 # VIMGCOV
 
 VIMGCOV is a Vim plugin designed to display gcov coverage for C/C++ code.
