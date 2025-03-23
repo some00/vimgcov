@@ -23,47 +23,58 @@ def cpp_code():
     """
 
 
-# TODO investigate
-@pytest.mark.skip(reason="Github Actions throws Bad file descrtiptor")
 def test_getcoverage(tmp_path, cpp_code):
-    # Create paths for test files
     test_cpp_file = tmp_path / "test.cpp"
     test_binary = tmp_path / "test_binary"
+    gcno_file = tmp_path / "test_binary-test.gcno"
 
-    # Write the test C++ code to the temporary file
     test_cpp_file.write_text(cpp_code)
 
-    # Compile the C++ file with coverage enabled
-    subprocess.run([
+    print("[DEBUG] Compiling test binary...")
+    compile_result = subprocess.run([
         "g++", "--coverage", str(test_cpp_file), "-o", str(test_binary)
-    ], check=True)
+    ], capture_output=True, text=True)
+    print("[DEBUG] Compile stdout:", compile_result.stdout)
+    print("[DEBUG] Compile stderr:", compile_result.stderr)
 
-    # Run the binary to generate coverage data
-    subprocess.run([str(test_binary)], check=True)
+    if compile_result.returncode != 0:
+        pytest.fail("Compilation failed")
 
-    # Call the getcoverage function
-    coverage_data = _vimgcov.getcoverage(
-        gcnos=[str(tmp_path / "test_binary-test.gcno")],
-        j=1,
-        path=str(test_cpp_file)
-    )
+    print("[DEBUG] Checking file existence...")
+    print("Binary exists:", test_binary.exists())
+    print("GCNO file exists:", gcno_file.exists())
 
-    # Define the expected coverage data
-    # First element of each tuple is the line number and the second is wether
-    # it is unexecuted.
+    print("[DEBUG] Running test binary...")
+    try:
+        subprocess.run(["chmod", "+x", str(test_binary)], check=True)
+        run_result = subprocess.run([str(test_binary)], capture_output=True,
+                                    text=True)
+        print("[DEBUG] Run stdout:", run_result.stdout)
+        print("[DEBUG] Run stderr:", run_result.stderr)
+    except Exception as e:
+        print("[DEBUG] Exception while running binary:", str(e))
+
+    print("[DEBUG] Checking coverage files...")
+    print("GCDA file exists:", any(
+        f.suffix == ".gcda" for f in tmp_path.iterdir()))
+
+    print("[DEBUG] Running getcoverage...")
+    try:
+        coverage_data = _vimgcov.getcoverage(
+            gcnos=[str(gcno_file)],
+            j=1,
+            path=str(test_cpp_file)
+        )
+        print("[DEBUG] Coverage data:", coverage_data)
+    except Exception as e:
+        print("[DEBUG] Exception in getcoverage:", str(e))
+
     expected_coverage = {
         str(test_cpp_file): [
-            (4, False),   # foo function (executed)
-            (5, False),   # foo function body
-            (6, False),   # End of foo function
-            (8, True),    # unused_function (not used)
-            (9, True),    # unused_function body
-            (10, True),   # End of unused_function
-            (12, False),  # main function
-            (13, False),  # call of foo function
-            (14, False)   # return statement
+            (4, False), (5, False), (6, False),
+            (8, True), (9, True), (10, True),
+            (12, False), (13, False), (14, False)
         ]
     }
 
-    # Check the output against the expected coverage
     assert coverage_data == expected_coverage
