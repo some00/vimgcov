@@ -13,6 +13,10 @@ VIMGCOV is a Vim plugin designed to display gcov coverage for C/C++ code.
 - pkg-config
 - RapidJSON
 
+## Supported languages
+- C++
+- Rust
+
 ## Installation
 
 To install the plugin, use your preferred plugin manager and include this repository and its dependencies in your `.vimrc`:
@@ -40,7 +44,7 @@ cmake --build _build
 
 This will create `_vimgcov.<python-version>.so` in the `python` folder. It’s a workaround, but it functions perfectly.
 
-## Usage
+## Usage C++
 
 The plugin searches for `.gcno` files recursively in the current working directory and assumes that gcov returns absolute paths for sources, which is typical for CMake-based projects. It works best when Vim is started from the root of the source tree with a build folder created there.
 
@@ -49,3 +53,10 @@ To use, open a source file and execute:
 ```vim
 :CoverageToggle! " command from vim-coverage, for which this repo is a provider
 ```
+
+## Usage Rust
+Compile and test your project with:
+```sh
+RUSTFLAGS="-C instrument-coverage" cargo test
+```
+The plugin will search for `profraw` files to visualize the coverage.
